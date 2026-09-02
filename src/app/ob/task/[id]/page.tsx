@@ -16,7 +16,9 @@ import {
   Send,
   Loader2,
   FileText,
-  AlertTriangle
+  AlertTriangle,
+  X,
+  FlipHorizontal
 } from "lucide-react";
 
 interface TaskDetail {
@@ -54,8 +56,12 @@ export default function TaskDetailPage() {
   const [findingDesc, setFindingDesc] = useState("");
   const [findingSeverity, setFindingSeverity] = useState<"LOW" | "MEDIUM" | "HIGH">("LOW");
 
-  const beforeInputRef = useRef<HTMLInputElement>(null);
-  const afterInputRef = useRef<HTMLInputElement>(null);
+  // Live Camera Modal State
+  const [activeCameraType, setActiveCameraType] = useState<"BEFORE" | "AFTER" | null>(null);
+  const [cameraFacing, setCameraFacing] = useState<"environment" | "user">("environment");
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const fetchTask = async () => {
     try {
@@ -78,26 +84,102 @@ export default function TaskDetailPage() {
     if (taskId) fetchTask();
   }, [taskId]);
 
-  const handleStartTask = async () => {
-    setIsStarting(true);
+  // Handle opening live camera stream
+  const openLiveCamera = async (type: "BEFORE" | "AFTER") => {
+    setActiveCameraType(type);
+    setCameraError(null);
+
     try {
-      const res = await fetch(`/api/ob/task/${taskId}/start`, { method: "POST" });
-      if (res.ok) {
-        await fetchTask();
-      } else {
-        alert("Gagal memulai tugas.");
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Kamera browser tidak didukung.");
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsStarting(false);
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: cameraFacing,
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+
+      setCameraStream(stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err: any) {
+      console.error("Camera access error:", err);
+      setCameraError(
+        "Tidak dapat mengakses kamera secara langsung. Silakan gunakan tombol 'Pilih File / Galeri' di bawah."
+      );
     }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "BEFORE" | "AFTER") => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Close live camera
+  const closeLiveCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      setCameraStream(null);
+    }
+    setActiveCameraType(null);
+    setCameraError(null);
+  };
 
+  // Re-attach stream when video element renders
+  useEffect(() => {
+    if (cameraStream && videoRef.current) {
+      videoRef.current.srcObject = cameraStream;
+    }
+  }, [cameraStream]);
+
+  // Flip camera between front & back
+  const toggleCameraFacing = async () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+    }
+    const nextFacing = cameraFacing === "environment" ? "user" : "environment";
+    setCameraFacing(nextFacing);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: nextFacing },
+        audio: false,
+      });
+      setCameraStream(stream);
+      if (videoRef.current) videoRef.current.srcObject = stream;
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Capture snapshot from video stream
+  const captureSnapshot = async () => {
+    if (!videoRef.current || !activeCameraType) return;
+
+    const video = videoRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+
+      const file = new File([blob], `${activeCameraType.toLowerCase()}_snapshot.jpg`, {
+        type: "image/jpeg",
+      });
+
+      const type = activeCameraType;
+      closeLiveCamera();
+      await uploadPhotoFile(file, type);
+    }, "image/jpeg", 0.85);
+  };
+
+  // Upload photo helper
+  const uploadPhotoFile = async (file: File, type: "BEFORE" | "AFTER") => {
     setUploadingType(type);
     const formData = new FormData();
     formData.append("photo", file);
@@ -120,6 +202,22 @@ export default function TaskDetailPage() {
       alert("Terjadi kendala saat upload foto.");
     } finally {
       setUploadingType(null);
+    }
+  };
+
+  const handleStartTask = async () => {
+    setIsStarting(true);
+    try {
+      const res = await fetch(`/api/ob/task/${taskId}/start`, { method: "POST" });
+      if (res.ok) {
+        await fetchTask();
+      } else {
+        alert("Gagal memulai tugas.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsStarting(false);
     }
   };
 
@@ -306,48 +404,62 @@ export default function TaskDetailPage() {
 
                 {beforePhoto ? (
                   <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-100 group">
-                    <img src={beforePhoto.path} alt="Before" className="w-full h-44 object-cover" />
+                    <img src={beforePhoto.path} alt="Before" className="w-full h-48 object-cover" />
                     {!isReadOnly && (
-                      <button
-                        onClick={() => beforeInputRef.current?.click()}
-                        className="absolute bottom-2 right-2 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1 shadow-sm hover:bg-slate-900"
-                      >
-                        <Camera className="w-3 h-3" />
-                        <span>Ambil Ulang</span>
-                      </button>
+                      <div className="absolute bottom-2 right-2 flex space-x-1.5">
+                        <button
+                          onClick={() => openLiveCamera("BEFORE")}
+                          className="bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1 shadow-sm hover:bg-slate-900"
+                        >
+                          <Camera className="w-3 h-3" />
+                          <span>Foto Ulang</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 ) : (
-                  <div
-                    onClick={() => !isReadOnly && beforeInputRef.current?.click()}
-                    className="h-36 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100/70 hover:border-slate-300 transition-all p-4 text-center"
-                  >
+                  <div className="space-y-2">
                     {uploadingType === "BEFORE" ? (
-                      <div className="flex flex-col items-center">
+                      <div className="h-32 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/50 flex flex-col items-center justify-center p-4">
                         <Loader2 className="w-6 h-6 text-blue-900 animate-spin mb-1.5" />
-                        <span className="text-xs font-semibold text-slate-600">Mengunggah foto...</span>
+                        <span className="text-xs font-semibold text-slate-700">Mengunggah foto...</span>
                       </div>
                     ) : (
-                      <>
-                        <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-900 flex items-center justify-center mb-1.5">
-                          <Camera className="w-5 h-5" />
-                        </div>
-                        <span className="text-xs font-bold text-slate-800">Ambil Foto Sebelum</span>
-                        <span className="text-[10px] text-slate-400 mt-0.5">Kondisi area sebelum dibersihkan</span>
-                      </>
+                      <div className="grid grid-cols-2 gap-2">
+                        {/* Option 1: Live Camera Stream */}
+                        <button
+                          type="button"
+                          onClick={() => openLiveCamera("BEFORE")}
+                          className="h-28 rounded-xl border border-blue-200 bg-blue-50/60 hover:bg-blue-100/70 flex flex-col items-center justify-center p-2 text-center transition-all active:scale-95"
+                        >
+                          <div className="w-9 h-9 rounded-full bg-blue-900 text-white flex items-center justify-center mb-1 shadow-xs">
+                            <Camera className="w-4 h-4" />
+                          </div>
+                          <span className="text-xs font-bold text-blue-950">Buka Kamera</span>
+                          <span className="text-[10px] text-blue-700">Live Snapshot</span>
+                        </button>
+
+                        {/* Option 2: Native File / Gallery Input */}
+                        <label className="h-28 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex flex-col items-center justify-center p-2 text-center transition-all cursor-pointer active:scale-95">
+                          <div className="w-9 h-9 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center mb-1">
+                            <Upload className="w-4 h-4" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800">Galeri / File</span>
+                          <span className="text-[10px] text-slate-400">Pilih dari HP</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) uploadPhotoFile(file, "BEFORE");
+                            }}
+                          />
+                        </label>
+                      </div>
                     )}
                   </div>
                 )}
-
-                {/* Hidden File Input for Before */}
-                <input
-                  ref={beforeInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => handlePhotoUpload(e, "BEFORE")}
-                />
               </div>
 
               {/* 2. After Photo Box */}
@@ -372,48 +484,62 @@ export default function TaskDetailPage() {
 
                 {afterPhoto ? (
                   <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-100 group">
-                    <img src={afterPhoto.path} alt="After" className="w-full h-44 object-cover" />
+                    <img src={afterPhoto.path} alt="After" className="w-full h-48 object-cover" />
                     {!isReadOnly && (
-                      <button
-                        onClick={() => afterInputRef.current?.click()}
-                        className="absolute bottom-2 right-2 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1 shadow-sm hover:bg-slate-900"
-                      >
-                        <Camera className="w-3 h-3" />
-                        <span>Ambil Ulang</span>
-                      </button>
+                      <div className="absolute bottom-2 right-2 flex space-x-1.5">
+                        <button
+                          onClick={() => openLiveCamera("AFTER")}
+                          className="bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1 shadow-sm hover:bg-slate-900"
+                        >
+                          <Camera className="w-3 h-3" />
+                          <span>Foto Ulang</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 ) : (
-                  <div
-                    onClick={() => !isReadOnly && afterInputRef.current?.click()}
-                    className="h-36 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100/70 hover:border-slate-300 transition-all p-4 text-center"
-                  >
+                  <div className="space-y-2">
                     {uploadingType === "AFTER" ? (
-                      <div className="flex flex-col items-center">
+                      <div className="h-32 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/50 flex flex-col items-center justify-center p-4">
                         <Loader2 className="w-6 h-6 text-blue-900 animate-spin mb-1.5" />
-                        <span className="text-xs font-semibold text-slate-600">Mengunggah foto...</span>
+                        <span className="text-xs font-semibold text-slate-700">Mengunggah foto...</span>
                       </div>
                     ) : (
-                      <>
-                        <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-900 flex items-center justify-center mb-1.5">
-                          <Camera className="w-5 h-5" />
-                        </div>
-                        <span className="text-xs font-bold text-slate-800">Ambil Foto Sesudah</span>
-                        <span className="text-[10px] text-slate-400 mt-0.5">Kondisi area setelah selesai dikerjakan</span>
-                      </>
+                      <div className="grid grid-cols-2 gap-2">
+                        {/* Option 1: Live Camera Stream */}
+                        <button
+                          type="button"
+                          onClick={() => openLiveCamera("AFTER")}
+                          className="h-28 rounded-xl border border-blue-200 bg-blue-50/60 hover:bg-blue-100/70 flex flex-col items-center justify-center p-2 text-center transition-all active:scale-95"
+                        >
+                          <div className="w-9 h-9 rounded-full bg-blue-900 text-white flex items-center justify-center mb-1 shadow-xs">
+                            <Camera className="w-4 h-4" />
+                          </div>
+                          <span className="text-xs font-bold text-blue-950">Buka Kamera</span>
+                          <span className="text-[10px] text-blue-700">Live Snapshot</span>
+                        </button>
+
+                        {/* Option 2: Native File / Gallery Input */}
+                        <label className="h-28 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex flex-col items-center justify-center p-2 text-center transition-all cursor-pointer active:scale-95">
+                          <div className="w-9 h-9 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center mb-1">
+                            <Upload className="w-4 h-4" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800">Galeri / File</span>
+                          <span className="text-[10px] text-slate-400">Pilih dari HP</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) uploadPhotoFile(file, "AFTER");
+                            }}
+                          />
+                        </label>
+                      </div>
                     )}
                   </div>
                 )}
-
-                {/* Hidden File Input for After */}
-                <input
-                  ref={afterInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => handlePhotoUpload(e, "AFTER")}
-                />
               </div>
 
               {/* Step 4: Optional Findings Report (PRD #11) */}
@@ -523,6 +649,77 @@ export default function TaskDetailPage() {
           </div>
         )}
       </div>
+
+      {/* LIVE CAMERA VIEWFINDER MODAL */}
+      {activeCameraType && (
+        <div className="fixed inset-0 z-50 bg-black flex flex-col justify-between">
+          {/* Top Camera Controls */}
+          <div className="p-4 flex items-center justify-between text-white z-10 bg-gradient-to-b from-black/80 to-transparent">
+            <button
+              onClick={closeLiveCamera}
+              className="p-2 rounded-full bg-black/40 text-white hover:bg-black/60"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <span className="text-sm font-bold uppercase tracking-wider">
+              Foto {activeCameraType === "BEFORE" ? "Sebelum" : "Sesudah"}
+            </span>
+            <button
+              onClick={toggleCameraFacing}
+              className="p-2 rounded-full bg-black/40 text-white hover:bg-black/60"
+              title="Ganti Kamera Depan/Belakang"
+            >
+              <FlipHorizontal className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Video Stream Element */}
+          <div className="relative flex-1 flex items-center justify-center overflow-hidden bg-black">
+            {cameraError ? (
+              <div className="p-6 text-center text-white space-y-4 max-w-xs">
+                <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
+                <p className="text-xs text-slate-300 leading-relaxed">{cameraError}</p>
+                <label className="inline-block bg-blue-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer">
+                  Pilih dari File / Galeri
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file && activeCameraType) {
+                        const type = activeCameraType;
+                        closeLiveCamera();
+                        uploadPhotoFile(file, type);
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            ) : (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
+
+          {/* Bottom Shutter Capture Bar */}
+          {!cameraError && (
+            <div className="p-8 bg-gradient-to-t from-black/90 to-transparent flex items-center justify-center z-10">
+              <button
+                onClick={captureSnapshot}
+                className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center p-1.5 active:scale-90 transition-transform shadow-lg"
+              >
+                <div className="w-full h-full rounded-full bg-white hover:bg-slate-200"></div>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
