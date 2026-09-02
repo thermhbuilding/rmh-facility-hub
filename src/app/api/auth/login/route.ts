@@ -60,10 +60,10 @@ export async function POST(req: Request) {
       },
       redirectUrl,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Login error:", error);
     return NextResponse.json(
-      { error: "Terjadi kesalahan pada server saat proses login." },
+      { error: `Terjadi kesalahan pada server: ${error?.message || "Internal server error"}` },
       { status: 500 }
     );
   }
