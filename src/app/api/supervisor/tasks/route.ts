@@ -12,19 +12,17 @@ export async function GET() {
   }
 
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const now = new Date();
+    const dateStr = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jakarta",
+    }).format(now);
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const todayDate = new Date(Date.UTC(year, month - 1, day));
 
     // Fetch all task instances for today with assigned user, area, photos, and findings
     const tasks = await prisma.taskInstance.findMany({
       where: {
-        scheduledDate: {
-          gte: today,
-          lt: tomorrow,
-        },
+        scheduledDate: todayDate,
       },
       include: {
         task: {
@@ -53,10 +51,10 @@ export async function GET() {
     });
 
     return NextResponse.json({ tasks });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching supervisor tasks:", error);
     return NextResponse.json(
-      { error: "Gagal memuat daftar monitoring supervisor." },
+      { error: `Gagal memuat monitoring supervisor: ${error.message}` },
       { status: 500 }
     );
   }
