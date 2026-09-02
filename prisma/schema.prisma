@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  SUPERVISOR
+  OB
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  VERIFIED
+  REVISION_REQUIRED
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PhotoType {
+  BEFORE
+  AFTER
+}
+
+model User {
+  id               String           @id @default(uuid())
+  username         String           @unique
+  passwordHash     String           // Disimpan dalam bentuk hash (bcrypt)
+  name             String
+  role             Role             @default(OB)
+  active           Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  assignedTasks    TaskInstance[]   @relation("AssignedUser")
+  verifiedTasks    TaskInstance[]   @relation("VerifiedBy")
+}
+
+model Area {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  Tasks       Task[]
+}
+
+model Task {
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  areaId      String
+  area        Area           @relation(fields: [areaId], references: [id])
+  active      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  schedules   TaskSchedule[]
+  instances   TaskInstance[]
+}
+
+model TaskSchedule {
+  id          String   @id @default(uuid())
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id])
+  dayOfWeek   Int      // 0 = Minggu, 1 = Senin, ..., 6 = Sabtu
+  assignedTo  String?  // ID User (OB) yang ditugaskan secara default
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TaskInstance {
+  id              String       @id @default(uuid())
+  taskId          String
+  task            Task         @relation(fields: [taskId], references: [id])
+  assignedUserId  String
+  assignedUser    User         @relation("AssignedUser", fields: [assignedUserId], references: [id])
+  scheduledDate   DateTime     @db.Date // Tanggal tugas harus dikerjakan
+  status          TaskStatus   @default(PENDING)
+  
+  startedAt       DateTime?
+  submittedAt     DateTime?
+  verifiedAt      DateTime?
+  verifiedById    String?
+  verifiedBy      User?        @relation("VerifiedBy", fields: [verifiedById], references: [id])
+  revisionNote    String?      // Catatan jika status REVISION_REQUIRED
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  photos          TaskPhoto[]
+  findings        TaskFinding[]
+}
+
+model TaskPhoto {
+  id              String       @id @default(uuid())
+  taskInstanceId  String
+  taskInstance    TaskInstance @relation(fields: [taskInstanceId], references: [id])
+  type            PhotoType
+  path            String       // Path URL ke Supabase Storage
+  capturedAt      DateTime?
+  uploadedAt      DateTime     @default(now())
+}
+
+model TaskFinding {
+  id              String       @id @default(uuid())
+  taskInstanceId  String
+  taskInstance    TaskInstance @relation(fields: [taskInstanceId], references: [id])
+  description     String
+  severity        Severity     @default(LOW)
+  createdAt       DateTime     @default(now())
+}
