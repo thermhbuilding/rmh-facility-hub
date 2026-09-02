@@ -257,7 +257,7 @@ export default function OBDashboard() {
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                     {item.status === "PENDING" && (
                       <button
-                        onClick={() => alert(`Memulai tugas: ${item.task.name}`)}
+                        onClick={() => router.push(`/ob/task/${item.id}`)}
                         className="w-full bg-blue-950 text-white text-xs font-semibold py-2.5 px-4 rounded-lg hover:bg-blue-900 flex items-center justify-center space-x-1.5 active:scale-[0.98] transition-all shadow-xs"
                       >
                         <PlayCircle className="w-4 h-4" />
@@ -267,7 +267,7 @@ export default function OBDashboard() {
 
                     {item.status === "IN_PROGRESS" && (
                       <button
-                        onClick={() => alert(`Melanjutkan tugas: ${item.task.name}`)}
+                        onClick={() => router.push(`/ob/task/${item.id}`)}
                         className="w-full bg-blue-600 text-white text-xs font-semibold py-2.5 px-4 rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-1.5 active:scale-[0.98] transition-all shadow-xs"
                       >
                         <Sparkles className="w-4 h-4" />
@@ -276,26 +276,32 @@ export default function OBDashboard() {
                     )}
 
                     {item.status === "SUBMITTED" && (
-                      <div className="w-full text-center py-2 px-3 bg-purple-50 rounded-lg text-purple-800 text-xs font-medium border border-purple-100 flex items-center justify-center">
+                      <button
+                        onClick={() => router.push(`/ob/task/${item.id}`)}
+                        className="w-full text-center py-2 px-3 bg-purple-50 hover:bg-purple-100 rounded-lg text-purple-800 text-xs font-medium border border-purple-100 flex items-center justify-center transition-colors"
+                      >
                         <Clock className="w-3.5 h-3.5 mr-1.5 text-purple-600" />
-                        Menunggu review Supervisor
-                      </div>
+                        <span>Menunggu Review (Lihat Detail)</span>
+                      </button>
                     )}
 
                     {item.status === "VERIFIED" && (
-                      <div className="w-full text-center py-2 px-3 bg-emerald-50 rounded-lg text-emerald-800 text-xs font-medium border border-emerald-100 flex items-center justify-center">
+                      <button
+                        onClick={() => router.push(`/ob/task/${item.id}`)}
+                        className="w-full text-center py-2 px-3 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-emerald-800 text-xs font-medium border border-emerald-100 flex items-center justify-center transition-colors"
+                      >
                         <CheckCircle2 className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
-                        Tugas Selesai & Terverifikasi
-                      </div>
+                        <span>Selesai & Terverifikasi</span>
+                      </button>
                     )}
 
                     {item.status === "REVISION_REQUIRED" && (
                       <button
-                        onClick={() => alert(`Perbaiki tugas: ${item.task.name}`)}
+                        onClick={() => router.push(`/ob/task/${item.id}`)}
                         className="w-full bg-rose-600 text-white text-xs font-semibold py-2.5 px-4 rounded-lg hover:bg-rose-700 flex items-center justify-center space-x-1.5 active:scale-[0.98] transition-all"
                       >
                         <AlertCircle className="w-4 h-4" />
-                        <span>Perbaiki Pekerjaan</span>
+                        <span>Perbaiki Pekerjaan (Ada Catatan Revisi)</span>
                       </button>
                     )}
                   </div>
