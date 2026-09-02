@@ -20,6 +20,7 @@ import {
   X,
   FlipHorizontal
 } from "lucide-react";
+import { compressImage } from "@/lib/compress";
 
 interface TaskDetail {
   id: string;
@@ -181,11 +182,15 @@ export default function TaskDetailPage() {
   // Upload photo helper
   const uploadPhotoFile = async (file: File, type: "BEFORE" | "AFTER") => {
     setUploadingType(type);
-    const formData = new FormData();
-    formData.append("photo", file);
-    formData.append("type", type);
 
     try {
+      // Compress image client-side to ~200KB for lightning-fast mobile upload
+      const compressed = await compressImage(file, 1280, 1280, 0.75);
+
+      const formData = new FormData();
+      formData.append("photo", compressed);
+      formData.append("type", type);
+
       const res = await fetch(`/api/ob/task/${taskId}/photo`, {
         method: "POST",
         body: formData,

@@ -34,26 +34,28 @@ export async function GET() {
       },
     });
 
-    // 2. Auto-generate task instances for today if not yet created
-    for (const sched of schedules) {
-      const existing = await prisma.taskInstance.findFirst({
-        where: {
-          taskId: sched.taskId,
+    // 2. Fetch existing instances for today in one query
+    const existingInstances = await prisma.taskInstance.findMany({
+      where: {
+        assignedUserId: session.id,
+        scheduledDate: todayDate,
+      },
+      select: { taskId: true },
+    });
+    const existingTaskIds = new Set(existingInstances.map((i) => i.taskId));
+
+    // Bulk insert missing task instances
+    const missingSchedules = schedules.filter((s) => !existingTaskIds.has(s.taskId));
+    if (missingSchedules.length > 0) {
+      await prisma.taskInstance.createMany({
+        data: missingSchedules.map((s) => ({
+          taskId: s.taskId,
           assignedUserId: session.id,
           scheduledDate: todayDate,
-        },
+          status: TaskStatus.PENDING,
+        })),
+        skipDuplicates: true,
       });
-
-      if (!existing) {
-        await prisma.taskInstance.create({
-          data: {
-            taskId: sched.taskId,
-            assignedUserId: session.id,
-            scheduledDate: todayDate,
-            status: TaskStatus.PENDING,
-          },
-        });
-      }
     }
 
     // 3. If still no tasks (e.g. newly created user), assign all available active master tasks for today
