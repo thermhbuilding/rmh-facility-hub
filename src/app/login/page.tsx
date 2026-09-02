@@ -1,82 +1,172 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Shield, Building2, User, KeyRound, Loader2, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (e?: React.FormEvent, customUser?: string, customPass?: string) => {
+    if (e) e.preventDefault();
+    setError("");
     setIsLoading(true);
-    
-    // TODO: Implement actual login logic with Supabase/NextAuth
-    setTimeout(() => {
+
+    const userToLogin = customUser || username;
+    const passToLogin = customPass || password;
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: userToLogin, password: passToLogin }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Gagal masuk. Periksa kembali username dan password.");
+        setIsLoading(false);
+        return;
+      }
+
+      router.push(data.redirectUrl);
+      router.refresh();
+    } catch (err) {
+      setError("Terjadi kendala jaringan. Silakan coba lagi.");
       setIsLoading(false);
-      alert("Login logic will be implemented here!");
-    }, 1000);
+    }
+  };
+
+  const quickFill = (u: string, p: string) => {
+    setUsername(u);
+    setPassword(p);
+    handleLogin(undefined, u, p);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 font-sans">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-8 py-10">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">RMH Facility Hub</h1>
-            <p className="text-sm text-slate-500 mt-2">Masuk ke portal operasional gedung</p>
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4 font-sans selection:bg-blue-100">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        {/* Brand Header */}
+        <div className="bg-slate-900 px-8 py-8 text-white text-center relative overflow-hidden">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 mb-3">
+            <Building2 className="w-6 h-6" />
           </div>
+          <h1 className="text-xl font-bold tracking-tight text-white">RMH Facility Hub</h1>
+          <p className="text-xs text-slate-400 mt-1">Sistem Operasional & Pemeliharaan Gedung RMH</p>
+        </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
+        {/* Login Form */}
+        <div className="p-8">
+          {error && (
+            <div className="mb-5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-start space-x-2">
+              <span className="font-semibold text-rose-800">⚠️</span>
+              <p>{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={(e) => handleLogin(e)} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="username">
-                Username atau Email
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5" htmlFor="username">
+                Username
               </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-colors"
-                placeholder="Masukkan username"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <User className="w-4 h-4" />
+                </div>
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all"
+                  placeholder="Masukkan username Anda"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="password">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5" htmlFor="password">
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-colors"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all"
+                  placeholder="••••••••"
+                />
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-950 text-white font-medium py-2.5 rounded-lg hover:bg-blue-900 focus:ring-4 focus:ring-blue-950/30 transition-all disabled:opacity-70 flex justify-center items-center"
+              className="w-full mt-2 bg-slate-900 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-blue-950 focus:ring-4 focus:ring-slate-900/20 active:scale-[0.99] transition-all disabled:opacity-70 flex justify-center items-center text-sm shadow-sm"
             >
               {isLoading ? (
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Memverifikasi...
+                </>
               ) : (
-                "Masuk"
+                <>
+                  Masuk ke Portal
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
               )}
             </button>
           </form>
+
+          {/* Quick Demo Login Preset Buttons */}
+          <div className="mt-8 pt-6 border-t border-slate-100">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider text-center mb-3">
+              ⚡ Akun Demo (1-Click Login)
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => quickFill("budi", "ob123")}
+                className="flex flex-col items-center justify-center p-2.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 transition-all text-left group"
+              >
+                <span className="text-xs font-bold text-slate-800 group-hover:text-blue-900">OB Budi</span>
+                <span className="text-[10px] text-slate-500">Pelaksana</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => quickFill("supervisor", "spv123")}
+                className="flex flex-col items-center justify-center p-2.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 transition-all text-left group"
+              >
+                <span className="text-xs font-bold text-slate-800 group-hover:text-blue-900">Hendra</span>
+                <span className="text-[10px] text-slate-500">Supervisor</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => quickFill("admin", "admin123")}
+                className="flex flex-col items-center justify-center p-2.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 transition-all text-left group"
+              >
+                <span className="text-xs font-bold text-slate-800 group-hover:text-blue-900">Admin</span>
+                <span className="text-[10px] text-slate-500">Pengelola</span>
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="bg-slate-50 px-8 py-4 border-t border-slate-100 text-center">
-          <p className="text-xs text-slate-500">
-            &copy; {new Date().getFullYear()} Gedung RMH. Internal use only.
+
+        {/* Footer */}
+        <div className="bg-slate-50 px-8 py-3.5 border-t border-slate-100 text-center">
+          <p className="text-[11px] text-slate-400">
+            Gedung RMH &bull; Sistem Pemeliharaan Fasilitas Internal v1.0
           </p>
         </div>
       </div>
