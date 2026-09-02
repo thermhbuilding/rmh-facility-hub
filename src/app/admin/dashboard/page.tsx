@@ -14,7 +14,11 @@ import {
   XCircle,
   Loader2,
   Search,
-  RefreshCw
+  RefreshCw,
+  Edit2,
+  Trash2,
+  Eye,
+  Calendar
 } from "lucide-react";
 
 interface UserItem {
@@ -37,6 +41,7 @@ interface TaskItem {
   id: string;
   name: string;
   description: string | null;
+  areaId: string;
   area: { name: string };
   schedules: Array<{ id: string; dayOfWeek: number; assignedTo: string | null }>;
 }
@@ -51,7 +56,7 @@ export default function AdminDashboard() {
   const [areas, setAreas] = useState<AreaItem[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
 
-  // Form modals state
+  // Create Modals
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({ username: "", name: "", password: "", role: "OB" });
 
@@ -60,6 +65,14 @@ export default function AdminDashboard() {
 
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTask, setNewTask] = useState({ name: "", description: "", areaId: "", assignedToUserId: "" });
+
+  // Edit Modals
+  const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+  const [editUserPassword, setEditUserPassword] = useState("");
+
+  const [editingArea, setEditingArea] = useState<AreaItem | null>(null);
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  const [editTaskAssigned, setEditTaskAssigned] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -102,6 +115,7 @@ export default function AdminDashboard() {
     router.push("/login");
   };
 
+  // --- CREATE HANDLERS ---
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -174,6 +188,141 @@ export default function AdminDashboard() {
     }
   };
 
+  // --- EDIT HANDLERS ---
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/admin/users/${editingUser.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editingUser.name,
+          username: editingUser.username,
+          role: editingUser.role,
+          active: editingUser.active,
+          password: editUserPassword || undefined,
+        }),
+      });
+      if (res.ok) {
+        setEditingUser(null);
+        setEditUserPassword("");
+        await fetchAllData();
+      } else {
+        const error = await res.json();
+        alert(error.error || "Gagal mengupdate pengguna.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateArea = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingArea) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/admin/areas/${editingArea.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editingArea.name,
+          description: editingArea.description,
+        }),
+      });
+      if (res.ok) {
+        setEditingArea(null);
+        await fetchAllData();
+      } else {
+        const error = await res.json();
+        alert(error.error || "Gagal mengupdate area.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTask) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/admin/tasks/${editingTask.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editingTask.name,
+          description: editingTask.description,
+          areaId: editingTask.areaId,
+          assignedToUserId: editTaskAssigned || undefined,
+        }),
+      });
+      if (res.ok) {
+        setEditingTask(null);
+        setEditTaskAssigned("");
+        await fetchAllData();
+      } else {
+        const error = await res.json();
+        alert(error.error || "Gagal mengupdate tugas.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- DELETE HANDLERS ---
+  const handleDeleteUser = async (id: string, name: string) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus pengguna "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchAllData();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Gagal menghapus pengguna.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteArea = async (id: string, name: string) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus area "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/admin/areas/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchAllData();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Gagal menghapus area.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteTask = async (id: string, name: string) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus program tugas "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/admin/tasks/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchAllData();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Gagal menghapus tugas.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const obUsers = users.filter((u) => u.role === "OB");
 
   return (
@@ -188,7 +337,7 @@ export default function AdminDashboard() {
             <h1 className="text-base font-bold text-white tracking-tight leading-none">
               RMH Facility Hub
             </h1>
-            <span className="text-xs text-slate-400 font-medium">Administrator Panel</span>
+            <span className="text-xs text-slate-400 font-medium">Administrator Control Panel</span>
           </div>
         </div>
 
@@ -220,7 +369,7 @@ export default function AdminDashboard() {
             <div>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Master Area Gedung</span>
               <p className="text-2xl font-black text-slate-900 mt-1">{areas.length}</p>
-              <span className="text-[11px] text-slate-500">Lokasi terdaftar</span>
+              <span className="text-[11px] text-slate-500">Ruangan/Zona terdaftar</span>
             </div>
             <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-800 flex items-center justify-center">
               <MapPin className="w-5 h-5" />
@@ -231,7 +380,7 @@ export default function AdminDashboard() {
             <div>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Master Program Kerja</span>
               <p className="text-2xl font-black text-slate-900 mt-1">{tasks.length}</p>
-              <span className="text-[11px] text-slate-500">Tugas harian terjadwal</span>
+              <span className="text-[11px] text-slate-500">Tugas harian asli Excel</span>
             </div>
             <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-800 flex items-center justify-center">
               <ClipboardList className="w-5 h-5" />
@@ -302,7 +451,7 @@ export default function AdminDashboard() {
                       <th className="p-3">Username</th>
                       <th className="p-3">Peran (Role)</th>
                       <th className="p-3">Status</th>
-                      <th className="p-3">Tanggal Dibuat</th>
+                      <th className="p-3 text-right">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
@@ -334,8 +483,24 @@ export default function AdminDashboard() {
                             </span>
                           )}
                         </td>
-                        <td className="p-3 text-slate-500">
-                          {new Date(u.createdAt).toLocaleDateString("id-ID")}
+                        <td className="p-3 text-right space-x-1">
+                          <button
+                            onClick={() => {
+                              setEditingUser(u);
+                              setEditUserPassword("");
+                            }}
+                            className="p-1.5 text-slate-600 hover:text-blue-900 hover:bg-blue-50 rounded"
+                            title="Edit Pengguna"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(u.id, u.name)}
+                            className="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded"
+                            title="Hapus Pengguna"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -350,7 +515,7 @@ export default function AdminDashboard() {
             <div className="p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Master Data Area Gedung</h3>
+                  <h3 className="text-sm font-bold text-slate-900">Master Data Area Gedung RMH</h3>
                   <p className="text-xs text-slate-500">Daftar ruangan dan zona lokasi operasional Gedung RMH.</p>
                 </div>
                 <button
@@ -364,15 +529,35 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {areas.map((a) => (
-                  <div key={a.id} className="p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300">
-                    <div className="flex items-center space-x-2 text-slate-900 font-bold text-sm mb-1">
-                      <MapPin className="w-4 h-4 text-slate-400" />
-                      <span>{a.name}</span>
+                  <div key={a.id} className="p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center space-x-2 text-slate-900 font-bold text-sm">
+                          <MapPin className="w-4 h-4 text-slate-400" />
+                          <span>{a.name}</span>
+                        </div>
+                        <div className="flex space-x-1">
+                          <button
+                            onClick={() => setEditingArea(a)}
+                            className="p-1 text-slate-400 hover:text-blue-900 rounded"
+                            title="Edit Area"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteArea(a.id, a.name)}
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                            title="Hapus Area"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed mb-3">
+                        {a.description || "Tidak ada deskripsi rincian area."}
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-500 leading-relaxed mb-3">
-                      {a.description || "Tidak ada deskripsi rincian area."}
-                    </p>
-                    <span className="text-[11px] font-semibold text-blue-900 bg-blue-50 px-2 py-0.5 rounded">
+                    <span className="text-[11px] font-semibold text-blue-900 bg-blue-50 px-2 py-0.5 rounded w-fit">
                       {a._count?.Tasks || 0} Tugas Terkait
                     </span>
                   </div>
@@ -386,8 +571,8 @@ export default function AdminDashboard() {
             <div className="p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Master Program Kerja Harian</h3>
-                  <p className="text-xs text-slate-500">Definisi pekerjaan rutin dan penugasan pelaksana default.</p>
+                  <h3 className="text-sm font-bold text-slate-900">Master Program Kerja Harian ({tasks.length} Tugas)</h3>
+                  <p className="text-xs text-slate-500">Definisi pekerjaan rutin sesuai sheet Program Harian Excel.</p>
                 </div>
                 <button
                   onClick={() => setShowAddTask(true)}
@@ -398,22 +583,47 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              <div className="space-y-3">
-                {tasks.map((t) => (
-                  <div key={t.id} className="p-4 rounded-xl border border-slate-200 bg-white flex flex-col md:flex-row md:items-center justify-between gap-3">
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-bold text-sm text-slate-900">{t.name}</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                          {t.area.name}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 mt-1">{t.description}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-xs text-emerald-800 font-semibold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-                        🗓️ Jadwal: Senin - Sabtu
+              <div className="space-y-2.5">
+                {tasks.map((t, idx) => (
+                  <div key={t.id} className="p-3.5 rounded-xl border border-slate-200 bg-white flex flex-col md:flex-row md:items-center justify-between gap-3 hover:border-slate-300 transition-colors">
+                    <div className="flex items-start space-x-3">
+                      <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                        {idx + 1}
                       </span>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-bold text-sm text-slate-900">{t.name}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-900 border border-blue-100">
+                            {t.area.name}
+                          </span>
+                        </div>
+                        {t.description && (
+                          <p className="text-xs text-slate-500 mt-0.5">{t.description}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2 self-end md:self-center shrink-0">
+                      <span className="text-[11px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        🗓️ {t.schedules?.length || 0} Hari / Minggu
+                      </span>
+                      <button
+                        onClick={() => {
+                          setEditingTask(t);
+                          setEditTaskAssigned(t.schedules[0]?.assignedTo || "");
+                        }}
+                        className="p-1.5 text-slate-500 hover:text-blue-900 hover:bg-blue-50 rounded"
+                        title="Edit Tugas"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTask(t.id, t.name)}
+                        className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded"
+                        title="Hapus Tugas"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -423,7 +633,202 @@ export default function AdminDashboard() {
         </section>
       </main>
 
-      {/* Modal Add User */}
+      {/* --- MODAL EDIT USER --- */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <form onSubmit={handleUpdateUser} className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl p-6 space-y-4">
+            <h3 className="font-bold text-base text-slate-900">Edit Pengguna</h3>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
+              <input
+                type="text"
+                required
+                value={editingUser.name}
+                onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:ring-2 focus:ring-blue-900"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Username</label>
+              <input
+                type="text"
+                required
+                value={editingUser.username}
+                onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:ring-2 focus:ring-blue-900"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Ganti Password (Kosongkan jika tidak diubah)</label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={editUserPassword}
+                onChange={(e) => setEditUserPassword(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:ring-2 focus:ring-blue-900"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Peran (Role)</label>
+              <select
+                value={editingUser.role}
+                onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as any })}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-900"
+              >
+                <option value="OB">Pelaksana (OB)</option>
+                <option value="SUPERVISOR">Supervisor</option>
+                <option value="ADMIN">Administrator</option>
+              </select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="userActive"
+                checked={editingUser.active}
+                onChange={(e) => setEditingUser({ ...editingUser, active: e.target.checked })}
+                className="rounded text-blue-900"
+              />
+              <label htmlFor="userActive" className="text-xs font-semibold text-slate-700">Akun Aktif</label>
+            </div>
+            <div className="pt-2 flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                className="px-4 py-2 border border-slate-200 text-xs font-medium rounded-lg hover:bg-slate-50"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-blue-950 text-white text-xs font-semibold rounded-lg hover:bg-blue-900 disabled:opacity-60"
+              >
+                {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* --- MODAL EDIT AREA --- */}
+      {editingArea && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <form onSubmit={handleUpdateArea} className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl p-6 space-y-4">
+            <h3 className="font-bold text-base text-slate-900">Edit Area Gedung</h3>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Nama Area</label>
+              <input
+                type="text"
+                required
+                value={editingArea.name}
+                onChange={(e) => setEditingArea({ ...editingArea, name: e.target.value })}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:ring-2 focus:ring-blue-900"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Deskripsi / Keterangan</label>
+              <textarea
+                rows={3}
+                value={editingArea.description || ""}
+                onChange={(e) => setEditingArea({ ...editingArea, description: e.target.value })}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:ring-2 focus:ring-blue-900"
+              />
+            </div>
+            <div className="pt-2 flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setEditingArea(null)}
+                className="px-4 py-2 border border-slate-200 text-xs font-medium rounded-lg hover:bg-slate-50"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-blue-950 text-white text-xs font-semibold rounded-lg hover:bg-blue-900 disabled:opacity-60"
+              >
+                {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* --- MODAL EDIT TASK --- */}
+      {editingTask && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <form onSubmit={handleUpdateTask} className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl p-6 space-y-4">
+            <h3 className="font-bold text-base text-slate-900">Edit Program Tugas</h3>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Nama Tugas</label>
+              <input
+                type="text"
+                required
+                value={editingTask.name}
+                onChange={(e) => setEditingTask({ ...editingTask, name: e.target.value })}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:ring-2 focus:ring-blue-900"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Area Lokasi</label>
+              <select
+                required
+                value={editingTask.areaId}
+                onChange={(e) => setEditingTask({ ...editingTask, areaId: e.target.value })}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-900"
+              >
+                {areas.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Tugaskan ke Pelaksana (OB)</label>
+              <select
+                value={editTaskAssigned}
+                onChange={(e) => setEditTaskAssigned(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-900"
+              >
+                <option value="">-- Pilih Pelaksana --</option>
+                {obUsers.map((ob) => (
+                  <option key={ob.id} value={ob.id}>
+                    {ob.name} (@{ob.username})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Instruksi Kerja</label>
+              <textarea
+                rows={2}
+                value={editingTask.description || ""}
+                onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:ring-2 focus:ring-blue-900"
+              />
+            </div>
+            <div className="pt-2 flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setEditingTask(null)}
+                className="px-4 py-2 border border-slate-200 text-xs font-medium rounded-lg hover:bg-slate-50"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-blue-950 text-white text-xs font-semibold rounded-lg hover:bg-blue-900 disabled:opacity-60"
+              >
+                {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* --- CREATE MODALS --- */}
       {showAddUser && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <form onSubmit={handleCreateUser} className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl p-6 space-y-4">
@@ -493,7 +898,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal Add Area */}
       {showAddArea && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <form onSubmit={handleCreateArea} className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl p-6 space-y-4">
@@ -539,7 +943,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal Add Task */}
       {showAddTask && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <form onSubmit={handleCreateTask} className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl p-6 space-y-4">

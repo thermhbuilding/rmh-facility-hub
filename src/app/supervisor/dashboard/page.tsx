@@ -199,7 +199,15 @@ export default function SupervisorDashboard() {
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => router.push("/supervisor/reports")}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-950 hover:bg-blue-900 text-white text-xs font-semibold shadow-2xs transition-all"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Rekap & Laporan Harian</span>
+          </button>
+
           <div className="text-right hidden sm:block">
             <p className="text-xs font-bold text-slate-800">{userName}</p>
             <p className="text-[11px] text-slate-500">Supervisor Gedung RMH</p>
