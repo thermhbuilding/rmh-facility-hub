@@ -31,10 +31,41 @@ export async function POST(
 
     const task = await prisma.taskInstance.findUnique({
       where: { id },
+      include: {
+        assignedUser: {
+          select: { id: true, name: true },
+        },
+      },
     });
 
     if (!task) {
       return NextResponse.json({ error: "Tugas tidak ditemukan." }, { status: 404 });
+    }
+
+    // Concurrency Check: If task is claimed/in-progress by someone else
+    if (
+      task.status === "IN_PROGRESS" &&
+      task.assignedUserId !== session.id &&
+      session.role !== "ADMIN"
+    ) {
+      return NextResponse.json(
+        {
+          error: `Anda tidak dapat mengunggah foto karena tugas ini sedang dikerjakan oleh ${task.assignedUser?.name || "petugas lain"}.`,
+        },
+        { status: 403 }
+      );
+    }
+
+    // If task was still PENDING or REVISION_REQUIRED, auto-claim to current OB
+    if (task.status === "PENDING" || (task.status === "REVISION_REQUIRED" && task.assignedUserId !== session.id)) {
+      await prisma.taskInstance.update({
+        where: { id },
+        data: {
+          status: "IN_PROGRESS",
+          assignedUserId: session.id,
+          startedAt: task.startedAt || new Date(),
+        },
+      });
     }
 
     // Generate unique filename

@@ -24,11 +24,24 @@ export async function POST(
       where: { id },
       include: {
         photos: true,
+        assignedUser: {
+          select: { id: true, name: true },
+        },
       },
     });
 
     if (!task) {
       return NextResponse.json({ error: "Tugas tidak ditemukan." }, { status: 404 });
+    }
+
+    // Ownership Concurrency Check
+    if (task.assignedUserId !== session.id && session.role !== "ADMIN") {
+      return NextResponse.json(
+        {
+          error: `Hanya petugas pelaksana (${task.assignedUser?.name || "petugas terdaftar"}) yang dapat mengirim laporan tugas ini.`,
+        },
+        { status: 403 }
+      );
     }
 
     // Validation rules (PRD Section 12 & 24)

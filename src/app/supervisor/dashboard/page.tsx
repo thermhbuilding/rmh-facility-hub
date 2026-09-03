@@ -338,7 +338,25 @@ export default function SupervisorDashboard() {
                         <p className="text-slate-500 text-[11px] mt-0.5">{t.task.area.name}</p>
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className="font-semibold text-slate-800">{t.assignedUser.name}</span>
+                        {t.status === "PENDING" ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                            Tersedia (Pool Terbuka)
+                          </span>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-900 font-bold text-[10px] flex items-center justify-center border border-blue-200 shrink-0">
+                              {t.assignedUser?.name?.charAt(0) || "U"}
+                            </div>
+                            <div>
+                              <span className="font-bold text-slate-900 block leading-tight">
+                                {t.assignedUser?.name || "-"}
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                @{t.assignedUser?.username}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </td>
                       <td className="py-3.5 px-4">{renderStatusBadge(t.status)}</td>
                       <td className="py-3.5 px-4">
@@ -400,6 +418,30 @@ export default function SupervisorDashboard() {
 
             {/* Modal Content */}
             <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+              {/* Worker & Verification Identity Card */}
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                    Petugas Pelaksana (OB)
+                  </span>
+                  <p className="font-bold text-slate-900 text-sm mt-0.5">
+                    {selectedTask.status === "PENDING"
+                      ? "Belum Diambil (Pool Terbuka)"
+                      : selectedTask.assignedUser?.name || "Petugas Lapangan"}
+                  </p>
+                </div>
+                {selectedTask.verifiedBy && (
+                  <div className="text-right">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">
+                      Diverifikasi Oleh
+                    </span>
+                    <p className="font-semibold text-emerald-800 text-xs mt-0.5">
+                      {selectedTask.verifiedBy.name}
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Status & Timing Details */}
               <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-xs">
                 <div>

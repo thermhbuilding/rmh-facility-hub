@@ -313,7 +313,14 @@ export default function SupervisorReportsPage() {
                         </td>
                         <td className="p-3 text-slate-700 font-semibold">{t.task.area.name}</td>
                         <td className="p-3">
-                          <span className="font-bold text-slate-800">{t.assignedUser.name}</span>
+                          {t.status === "PENDING" ? (
+                            <span className="text-slate-400 text-xs italic">Belum Diambil (Pool Terbuka)</span>
+                          ) : (
+                            <div>
+                              <span className="font-bold text-slate-900 block">{t.assignedUser?.name || "-"}</span>
+                              <span className="text-[10px] text-slate-500">@{t.assignedUser?.username}</span>
+                            </div>
+                          )}
                         </td>
                         <td className="p-3 text-[11px] text-slate-600">
                           <div>

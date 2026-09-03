@@ -22,35 +22,30 @@ export async function GET() {
     const todayDate = new Date(Date.UTC(year, month - 1, day));
     const dayOfWeek = todayDate.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
 
-    // 1. Check active schedules for this OB on this dayOfWeek
+    // 1. Check active schedules for this dayOfWeek
     const schedules = await prisma.taskSchedule.findMany({
       where: {
         active: true,
         dayOfWeek: dayOfWeek === 0 ? 1 : dayOfWeek, // Fallback to Monday if Sunday for testing
-        OR: [
-          { assignedTo: session.id },
-          { assignedTo: null },
-        ],
       },
     });
 
-    // 2. Fetch existing instances for today in one query
+    // 2. Fetch all existing task instances for today (SHARED POOL across all users)
     const existingInstances = await prisma.taskInstance.findMany({
       where: {
-        assignedUserId: session.id,
         scheduledDate: todayDate,
       },
       select: { taskId: true },
     });
     const existingTaskIds = new Set(existingInstances.map((i) => i.taskId));
 
-    // Bulk insert missing task instances
+    // Bulk insert missing task instances for the shared pool
     const missingSchedules = schedules.filter((s) => !existingTaskIds.has(s.taskId));
     if (missingSchedules.length > 0) {
       await prisma.taskInstance.createMany({
         data: missingSchedules.map((s) => ({
           taskId: s.taskId,
-          assignedUserId: session.id,
+          assignedUserId: s.assignedTo || session.id, // Default PIC or current creator
           scheduledDate: todayDate,
           status: TaskStatus.PENDING,
         })),
@@ -58,10 +53,9 @@ export async function GET() {
       });
     }
 
-    // 3. If still no tasks (e.g. newly created user), assign all available active master tasks for today
+    // 3. If still no tasks generated for today, populate from active master tasks
     const currentCount = await prisma.taskInstance.count({
       where: {
-        assignedUserId: session.id,
         scheduledDate: todayDate,
       },
     });
@@ -69,7 +63,7 @@ export async function GET() {
     if (currentCount === 0) {
       const allTasks = await prisma.task.findMany({
         where: { active: true },
-        take: 3,
+        take: 10,
       });
 
       for (const t of allTasks) {
@@ -84,10 +78,9 @@ export async function GET() {
       }
     }
 
-    // 4. Fetch all tasks assigned to this OB for today
+    // 4. Fetch ALL shared tasks for today with assigned user, photos, and findings
     const tasks = await prisma.taskInstance.findMany({
       where: {
-        assignedUserId: session.id,
         scheduledDate: todayDate,
       },
       include: {
@@ -96,15 +89,27 @@ export async function GET() {
             area: true,
           },
         },
+        assignedUser: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+          },
+        },
         photos: true,
         findings: true,
       },
-      orderBy: {
-        createdAt: "asc",
-      },
+      orderBy: [
+        { status: "asc" },
+        { createdAt: "asc" },
+      ],
     });
 
-    return NextResponse.json({ tasks });
+    return NextResponse.json({
+      tasks,
+      currentUserId: session.id,
+      currentUserName: session.name,
+    });
   } catch (error: any) {
     console.error("Error fetching OB tasks:", error);
     return NextResponse.json(

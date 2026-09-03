@@ -24,6 +24,7 @@ import { compressImage } from "@/lib/compress";
 
 interface TaskDetail {
   id: string;
+  assignedUserId: string;
   status: "PENDING" | "IN_PROGRESS" | "SUBMITTED" | "VERIFIED" | "REVISION_REQUIRED";
   scheduledDate: string;
   startedAt?: string;
@@ -37,6 +38,11 @@ interface TaskDetail {
       name: string;
     };
   };
+  assignedUser?: {
+    id: string;
+    name: string;
+    username: string;
+  };
   photos: Array<{ id: string; type: "BEFORE" | "AFTER"; path: string }>;
   findings: Array<{ id: string; description: string; severity: "LOW" | "MEDIUM" | "HIGH" }>;
 }
@@ -47,6 +53,7 @@ export default function TaskDetailPage() {
   const taskId = params.id as string;
 
   const [task, setTask] = useState<TaskDetail | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,6 +77,7 @@ export default function TaskDetailPage() {
       if (res.ok) {
         const data = await res.json();
         setTask(data.task);
+        setCurrentUserId(data.currentUserId || "");
       } else {
         alert("Tugas tidak ditemukan.");
         router.push("/ob/dashboard");
@@ -214,13 +222,16 @@ export default function TaskDetailPage() {
     setIsStarting(true);
     try {
       const res = await fetch(`/api/ob/task/${taskId}/start`, { method: "POST" });
+      const data = await res.json();
       if (res.ok) {
         await fetchTask();
       } else {
-        alert("Gagal memulai tugas.");
+        alert(data.error || "Gagal memulai tugas.");
+        await fetchTask();
       }
     } catch (err) {
       console.error(err);
+      alert("Terjadi kendala saat memulai tugas.");
     } finally {
       setIsStarting(false);
     }
@@ -282,7 +293,8 @@ export default function TaskDetailPage() {
 
   const beforePhoto = task.photos.find((p) => p.type === "BEFORE");
   const afterPhoto = task.photos.find((p) => p.type === "AFTER");
-  const isReadOnly = task.status === "SUBMITTED" || task.status === "VERIFIED";
+  const isLockedByOther = task.status === "IN_PROGRESS" && task.assignedUserId !== currentUserId;
+  const isReadOnly = task.status === "SUBMITTED" || task.status === "VERIFIED" || isLockedByOther;
 
   return (
     <div className="min-h-screen bg-slate-100 flex justify-center pb-28 font-sans selection:bg-blue-100">
@@ -297,9 +309,28 @@ export default function TaskDetailPage() {
             <span className="font-semibold">Kembali</span>
           </button>
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Eksekusi Tugas
+            Eksekusi Tugas Lapangan
           </span>
         </header>
+
+        {/* Locked by Other OB Alert Banner */}
+        {isLockedByOther && (
+          <div className="bg-amber-50 border-b border-amber-300 p-4 text-amber-900">
+            <div className="flex items-start space-x-2.5">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-bold text-xs uppercase tracking-wide text-amber-900">
+                  🔒 Sedang Dikerjakan Petugas Lain
+                </h4>
+                <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                  Tugas ini sedang dikerjakan oleh{" "}
+                  <strong>{task.assignedUser?.name || "Petugas Lain"}</strong>. Halaman ini berada
+                  dalam mode <em>Lihat Saja (Read-Only)</em> agar tidak terjadi pengerjaan ganda.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Revision Alert Banner */}
         {task.status === "REVISION_REQUIRED" && (

@@ -42,7 +42,17 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ task: taskInstance });
+    const isMyTask = taskInstance.assignedUserId === session.id;
+    const isLockedByOther =
+      taskInstance.status === "IN_PROGRESS" && taskInstance.assignedUserId !== session.id;
+
+    return NextResponse.json({
+      task: taskInstance,
+      currentUserId: session.id,
+      currentUserName: session.name,
+      isMyTask,
+      isLockedByOther,
+    });
   } catch (error) {
     console.error("Error fetching task detail:", error);
     return NextResponse.json(
