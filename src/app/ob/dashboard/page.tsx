@@ -29,6 +29,7 @@ interface TaskItem {
   startedAt?: string;
   task: {
     name: string;
+    category?: "RUTINITAS" | "PERIODIK" | "BERKALA";
     description: string;
     area: {
       name: string;
@@ -328,9 +329,26 @@ export default function OBDashboard() {
                         {item.task.name}
                       </h4>
 
-                      <div className="flex items-center text-xs text-slate-500 mt-1.5 font-medium">
-                        <MapPin className="w-3.5 h-3.5 mr-1 text-slate-400 shrink-0" />
-                        <span className="truncate">{item.task.area.name}</span>
+                      <div className="flex items-center space-x-2 text-xs text-slate-500 mt-1.5 font-medium flex-wrap gap-y-1">
+                        <div className="flex items-center min-w-0">
+                          <MapPin className="w-3.5 h-3.5 mr-1 text-slate-400 shrink-0" />
+                          <span className="truncate">{item.task.area.name}</span>
+                        </div>
+                        {item.task.category === "RUTINITAS" && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 shrink-0">
+                            Rutinitas
+                          </span>
+                        )}
+                        {item.task.category === "PERIODIK" && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
+                            Periodik
+                          </span>
+                        )}
+                        {item.task.category === "BERKALA" && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-300 shrink-0">
+                            Berkala / Sabtu
+                          </span>
+                        )}
                       </div>
 
                       {item.task.description && (

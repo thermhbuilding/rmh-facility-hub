@@ -40,6 +40,7 @@ interface AreaItem {
 interface TaskItem {
   id: string;
   name: string;
+  category?: "RUTINITAS" | "PERIODIK" | "BERKALA";
   description: string | null;
   areaId: string;
   area: { name: string };
@@ -64,7 +65,17 @@ export default function AdminDashboard() {
   const [newArea, setNewArea] = useState({ name: "", description: "" });
 
   const [showAddTask, setShowAddTask] = useState(false);
-  const [newTask, setNewTask] = useState({ name: "", description: "", areaId: "" });
+  const [newTask, setNewTask] = useState<{
+    name: string;
+    category: "RUTINITAS" | "PERIODIK" | "BERKALA";
+    description: string;
+    areaId: string;
+  }>({
+    name: "",
+    category: "RUTINITAS",
+    description: "",
+    areaId: "",
+  });
 
   // Edit Modals
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
@@ -174,7 +185,7 @@ export default function AdminDashboard() {
       });
       if (res.ok) {
         setShowAddTask(false);
-        setNewTask({ name: "", description: "", areaId: "" });
+        setNewTask({ name: "", category: "RUTINITAS", description: "", areaId: "" });
         await fetchAllData();
       } else {
         const error = await res.json();
@@ -256,6 +267,7 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: editingTask.name,
+          category: editingTask.category || "RUTINITAS",
           description: editingTask.description,
           areaId: editingTask.areaId,
         }),
@@ -590,9 +602,24 @@ export default function AdminDashboard() {
                       <div>
                         <div className="flex items-center space-x-2">
                           <span className="font-bold text-sm text-slate-900">{t.name}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-900 border border-blue-100">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
                             {t.area.name}
                           </span>
+                          {t.category === "RUTINITAS" && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200">
+                              Rutinitas
+                            </span>
+                          )}
+                          {t.category === "PERIODIK" && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                              Periodik
+                            </span>
+                          )}
+                          {t.category === "BERKALA" && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-300">
+                              Berkala / Sabtu
+                            </span>
+                          )}
                         </div>
                         {t.description && (
                           <p className="text-xs text-slate-500 mt-0.5">{t.description}</p>
@@ -782,6 +809,18 @@ export default function AdminDashboard() {
               </select>
             </div>
             <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Kategori Program Kerja</label>
+              <select
+                value={editingTask.category || "RUTINITAS"}
+                onChange={(e) => setEditingTask({ ...editingTask, category: e.target.value as any })}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-900"
+              >
+                <option value="RUTINITAS">Rutinitas (Setiap Hari Senin - Jumat)</option>
+                <option value="PERIODIK">Periodik (Hari Khusus Bergantian)</option>
+                <option value="BERKALA">Berkala (General Cleaning Sabtu)</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Instruksi Kerja</label>
               <textarea
                 rows={2}
@@ -954,6 +993,18 @@ export default function AdminDashboard() {
                     {a.name}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Kategori Program Kerja</label>
+              <select
+                value={newTask.category}
+                onChange={(e) => setNewTask({ ...newTask, category: e.target.value as any })}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-900"
+              >
+                <option value="RUTINITAS">Rutinitas (Setiap Hari Senin - Jumat)</option>
+                <option value="PERIODIK">Periodik (Hari Khusus Bergantian)</option>
+                <option value="BERKALA">Berkala (General Cleaning Sabtu)</option>
               </select>
             </div>
             <div>

@@ -32,6 +32,7 @@ interface ReportTask {
   revisionNote?: string;
   task: {
     name: string;
+    category?: "RUTINITAS" | "PERIODIK" | "BERKALA";
     description: string;
     area: {
       name: string;
@@ -304,7 +305,24 @@ export default function SupervisorReportsPage() {
                       <tr key={t.id} className="hover:bg-slate-50/70">
                         <td className="p-3 text-center font-bold text-slate-500">{idx + 1}</td>
                         <td className="p-3 font-bold text-slate-900">
-                          {t.task.name}
+                          <div className="flex items-center space-x-1.5 flex-wrap">
+                            <span>{t.task.name}</span>
+                            {t.task.category === "RUTINITAS" && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200">
+                                Rutinitas
+                              </span>
+                            )}
+                            {t.task.category === "PERIODIK" && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                                Periodik
+                              </span>
+                            )}
+                            {t.task.category === "BERKALA" && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-300">
+                                Berkala
+                              </span>
+                            )}
+                          </div>
                           {t.revisionNote && (
                             <p className="text-[10px] text-rose-700 font-normal mt-0.5">
                               Revisi: &ldquo;{t.revisionNote}&rdquo;

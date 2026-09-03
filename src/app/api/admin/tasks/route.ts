@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { name, description, areaId } = await req.json();
+    const { name, description, areaId, category } = await req.json();
 
     if (!name?.trim() || !areaId) {
       return NextResponse.json(
@@ -41,9 +41,13 @@ export async function POST(req: Request) {
       );
     }
 
+    const validCategory =
+      category === "PERIODIK" || category === "BERKALA" ? category : "RUTINITAS";
+
     const newTask = await prisma.task.create({
       data: {
         name: name.trim(),
+        category: validCategory,
         description: description?.trim() || null,
         areaId,
       },

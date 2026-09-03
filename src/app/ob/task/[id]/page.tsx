@@ -33,6 +33,7 @@ interface TaskDetail {
   revisionNote?: string;
   task: {
     name: string;
+    category?: "RUTINITAS" | "PERIODIK" | "BERKALA";
     description: string;
     area: {
       name: string;
@@ -352,11 +353,28 @@ export default function TaskDetailPage() {
         {/* Task Title & Status Card */}
         <section className="p-4 bg-slate-50 border-b border-slate-200">
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center space-x-1 text-xs text-slate-500 font-medium">
-              <MapPin className="w-3.5 h-3.5 text-slate-400" />
-              <span>{task.task.area.name}</span>
+            <div className="flex items-center space-x-2 text-xs text-slate-500 font-medium flex-wrap">
+              <div className="flex items-center space-x-1">
+                <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                <span>{task.task.area.name}</span>
+              </div>
+              {task.task.category === "RUTINITAS" && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200">
+                  Rutinitas
+                </span>
+              )}
+              {task.task.category === "PERIODIK" && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                  Periodik
+                </span>
+              )}
+              {task.task.category === "BERKALA" && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-300">
+                  Berkala / Sabtu
+                </span>
+              )}
             </div>
-            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 shrink-0">
               {task.status}
             </span>
           </div>

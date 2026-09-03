@@ -15,12 +15,15 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const { name, description, areaId } = await req.json();
+    const { name, description, areaId, category } = await req.json();
 
     const dataToUpdate: any = {};
     if (name) dataToUpdate.name = name.trim();
     if (description !== undefined) dataToUpdate.description = description?.trim() || null;
     if (areaId) dataToUpdate.areaId = areaId;
+    if (category && (category === "RUTINITAS" || category === "PERIODIK" || category === "BERKALA")) {
+      dataToUpdate.category = category;
+    }
 
     const updated = await prisma.task.update({
       where: { id },

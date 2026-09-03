@@ -1,12 +1,12 @@
-import { PrismaClient, Role, TaskStatus } from "@prisma/client";
+﻿import { PrismaClient, Role, TaskStatus, TaskCategory } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Memulai migrasi data mentah dari Excel ke Supabase...");
+  console.log("🌱 Memulai migrasi data lengkap Excel (Rutinitas, Periodik, & Berkala) ke Supabase...");
 
-  // 1. Bersihkan data lama jika diperlukan
+  // 1. Bersihkan data lama
   await prisma.taskFinding.deleteMany();
   await prisma.taskPhoto.deleteMany();
   await prisma.taskInstance.deleteMany();
@@ -58,18 +58,18 @@ async function main() {
 
   console.log("👤 4 User default berhasil dibuat.");
 
-  // 3. Buat Master Area Lengkap Sesuai Excel
+  // 3. Buat Master Area Gedung RMH
   const areaData = [
     { name: "Lobby Utama & Kaca Masuk", description: "Area resepsionis, pintu kaca, lantai granit, dan ruang tunggu tamu." },
     { name: "Toilet Lt. 1 & Lt. 2", description: "Kloset, wastafel, cermin, urinoir, dan exhaust fan toilet pria & wanita." },
     { name: "Mushola & Tempat Wudhu", description: "Ruang ibadah sholat, karpet sajadah, rak mukena, dan kran tempat wudhu." },
     { name: "Ruang Kerja Staff & Meja Kantor", description: "Area workstation staff, meja kerja, kursi, dan lemari file arsip." },
     { name: "Area Pantry & Dispenser", description: "Dapur bersih, wastafel cuci piring, kulkas, meja makan, dan dispenser air." },
-    { name: "Teras Balkon & Taman Tengah", description: "Balkon lantai 2, taman tengah, tanaman hias/plastik, dan gradensa." },
+    { name: "Teras Balkon & Taman Tengah", description: "Balkon lantai 2, taman tengah, tanaman hias/plastik, batu coral, dan gradensa." },
     { name: "Tangga, Selasar & List Kayu", description: "Anak tangga, pegangan handle tangga, railing, list kayu dinding, dan koridor." },
     { name: "Pos Security & Gerbang Pagar", description: "Pos jaga keamanan, gerbang utama, dan daun pagar luar." },
     { name: "Garasi & Area Parkir Motor", description: "Area parkir kendaraan roda 2 dan roda 4, lantai garasi samping, dan gazebo." },
-    { name: "Dak Atas, Ruang Mesin & Luar", description: "Area lantai atap dak, canopy kaca, dan talang pembuangan air." },
+    { name: "Dak Atas, Canopy & Luar", description: "Area lantai atap dak, canopy kaca, dan talang pembuangan air." },
   ];
 
   const areaMap = new Map<string, string>();
@@ -79,291 +79,357 @@ async function main() {
   }
   console.log(`🏢 ${areaMap.size} Master Area berhasil dibuat.`);
 
-  // 4. Buat Master Task & Jadwal (Rutinitas, Periodik, dan Berkala)
-  const taskDefinitions = [
-    // --- RUTINITAS (Senin - Jumat: Days 1, 2, 3, 4, 5) ---
+  // 4. Dataset Master Task Excel (Sheet Program Harian: Rutinitas, Periodik, & Berkala)
+  const taskDefinitions: Array<{
+    name: string;
+    category: TaskCategory;
+    area: string;
+    desc: string;
+    days: number[]; // 1=Senin, 2=Selasa, 3=Rabu, 4=Kamis, 5=Jumat, 6=Sabtu
+  }> = [
+    // === A. KELOMPOK RUTINITAS (Setiap Hari Senin - Jumat: Days 1, 2, 3, 4, 5) ===
     {
       name: "Pengecekan dan Pembersihan Mushola",
+      category: TaskCategory.RUTINITAS,
       area: "Mushola & Tempat Wudhu",
       desc: "Vacuum karpet sajadah, rapikan mukena/sarung, dan bersihkan area sholat.",
       days: [1, 2, 3, 4, 5],
-      assignedTo: obSiti.id,
     },
     {
       name: "Pengecekan dan Pembersihan Toilet",
+      category: TaskCategory.RUTINITAS,
       area: "Toilet Lt. 1 & Lt. 2",
       desc: "Sikat kloset, bersihkan wastafel, lap cermin, isi ulang sabun, dan pel lantai.",
       days: [1, 2, 3, 4, 5],
-      assignedTo: obBudi.id,
     },
     {
-      name: "Pembersihan & Mopping Lobby",
+      name: "Pembersihan Lobby",
+      category: TaskCategory.RUTINITAS,
       area: "Lobby Utama & Kaca Masuk",
-      desc: "Sapu dan pel lantai granit lobby utama serta bersihkan kaca pintu masuk.",
+      desc: "Sapu dan pel lantai granit lobby utama serta jaga kebersihan ruang tunggu tamu.",
       days: [1, 2, 3, 4, 5],
-      assignedTo: obBudi.id,
     },
     {
       name: "Pembersihan Meja-Meja Kantor",
+      category: TaskCategory.RUTINITAS,
       area: "Ruang Kerja Staff & Meja Kantor",
       desc: "Lap permukaan meja kerja staff, bersihkan dari debu tanpa menggeser dokumen penting.",
       days: [1, 2, 3, 4, 5],
-      assignedTo: obSiti.id,
+    },
+    {
+      name: "Pembersihan Kaca Lobby",
+      category: TaskCategory.RUTINITAS,
+      area: "Lobby Utama & Kaca Masuk",
+      desc: "Lap kaca pintu masuk dan dinding kaca lobby agar bebas dari bekas sidik jari/debu.",
+      days: [1, 2, 3, 4, 5],
+    },
+    {
+      name: "Pembersihan Teras Balkon",
+      category: TaskCategory.RUTINITAS,
+      area: "Teras Balkon & Taman Tengah",
+      desc: "Sapu dan pel lantai teras balkon lantai 2 dari debu luar ruangan.",
+      days: [1, 2, 3, 4, 5],
     },
     {
       name: "Pengambilan Sampah Kantor",
+      category: TaskCategory.RUTINITAS,
       area: "Ruang Kerja Staff & Meja Kantor",
       desc: "Kosongkan semua tempat sampah ruangan kerja dan ganti plastik sampah baru.",
       days: [1, 2, 3, 4, 5],
-      assignedTo: obBudi.id,
     },
     {
-      name: "Pembersihan Anak Tangga & Selasar",
+      name: "Pembersihan Anak Tangga",
+      category: TaskCategory.RUTINITAS,
       area: "Tangga, Selasar & List Kayu",
-      desc: "Sapu dan pel seluruh anak tangga dari lantai 1 hingga lantai 2.",
+      desc: "Sapu dan pel setiap anak tangga penghubung lantai 1 dan 2.",
       days: [1, 2, 3, 4, 5],
-      assignedTo: obSiti.id,
+    },
+    {
+      name: "Pembersihan Area Pantry",
+      category: TaskCategory.RUTINITAS,
+      area: "Area Pantry & Dispenser",
+      desc: "Bersihkan wastafel cuci piring, lap meja makan dapur, dan rapikan peralatan.",
+      days: [1, 2, 3, 4, 5],
+    },
+    {
+      name: "Pembersihan Teras Taman Tengah",
+      category: TaskCategory.RUTINITAS,
+      area: "Teras Balkon & Taman Tengah",
+      desc: "Sapu area taman tengah dan rapikan daun-daun gugur.",
+      days: [1, 2, 3, 4, 5],
     },
 
-    // --- PERIODIK SENIN (Day 1) ---
+    // === B. KELOMPOK PERIODIK (Tugas Spesifik Per Hari Kerja) ===
+    // SENIN (Day 1)
     {
-      name: "Pembersihan Kaki-Kaki Kursi",
+      name: "Pembersihan Kaki Kursi",
+      category: TaskCategory.PERIODIK,
       area: "Ruang Kerja Staff & Meja Kantor",
-      desc: "Lap debu pada roda dan kaki besi kursi kerja staff.",
+      desc: "Lap dan bersihkan debu pada rangka dan roda kaki-kaki kursi kerja staff.",
       days: [1],
-      assignedTo: obBudi.id,
     },
     {
-      name: "Pembersihan Sawang Laba-Laba",
-      area: "Lobby Utama & Kaca Masuk",
-      desc: "Bersihkan sawang laba-laba di plafon dan sudut-sudut dinding tinggi.",
-      days: [1, 5],
-      assignedTo: obBudi.id,
-    },
-    {
-      name: "Pengelapan Handle Tangga & Pintu",
+      name: "Pembersihan Sawang Laba-laba",
+      category: TaskCategory.PERIODIK,
       area: "Tangga, Selasar & List Kayu",
-      desc: "Disinfeksi dan lap bersih handle tangga serta gagang pintu.",
+      desc: "Bersihkan sarang laba-laba di sudut plafon, tangga, dan ventilasi udara.",
       days: [1, 5],
-      assignedTo: obSiti.id,
+    },
+    {
+      name: "Pengelapan Handle Tangga Dan Pintu",
+      category: TaskCategory.PERIODIK,
+      area: "Tangga, Selasar & List Kayu",
+      desc: "Sanitasi dan lap seluruh pegangan handle tangga dan handle pintu utama.",
+      days: [1],
+    },
+    {
+      name: "Pengelapan List Kayu",
+      category: TaskCategory.PERIODIK,
+      area: "Tangga, Selasar & List Kayu",
+      desc: "Lap profil list kayu dinding koridor dan selasar lantai 1 & 2.",
+      days: [1, 5],
     },
     {
       name: "Pembersihan Kaca Luar",
-      area: "Lobby Utama & Kaca Masuk",
-      desc: "Bersihkan permukaan kaca gedung bagian luar dengan wiper kaca.",
+      category: TaskCategory.PERIODIK,
+      area: "Dak Atas, Canopy & Luar",
+      desc: "Bersihkan permukaan luar jendela kaca lantai 1 & lantai 2.",
       days: [1],
-      assignedTo: obBudi.id,
-    },
-    {
-      name: "Pengecekan & Pembersihan APAR",
-      area: "Tangga, Selasar & List Kayu",
-      desc: "Lap tabung APAR dari debu dan cek posisi jarum tekanan.",
-      days: [1, 5],
-      assignedTo: obSiti.id,
     },
 
-    // --- PERIODIK SELASA (Day 2) ---
+    // SELASA (Day 2)
     {
-      name: "Pembersihan Area Pantry & Sink",
-      area: "Area Pantry & Dispenser",
-      desc: "Bersihkan wastafel cuci piring, lap meja makan pantry, dan tata peralatan dapur.",
+      name: "Pengelapan Handle Pintu",
+      category: TaskCategory.PERIODIK,
+      area: "Lobby Utama & Kaca Masuk",
+      desc: "Lap dan desinfeksi seluruh handle pintu ruang kerja dan ruangan meeting.",
       days: [2],
-      assignedTo: obSiti.id,
     },
     {
       name: "Pembersihan Pos Security",
+      category: TaskCategory.PERIODIK,
       area: "Pos Security & Gerbang Pagar",
-      desc: "Sapu, pel, dan bersihkan meja pos jaga keamanan.",
+      desc: "Sapu, pel lantai pos jaga security, dan bersihkan kaca pos satpam.",
       days: [2],
-      assignedTo: obBudi.id,
     },
     {
       name: "Pengelapan Daun Gerbang Pagar",
+      category: TaskCategory.PERIODIK,
       area: "Pos Security & Gerbang Pagar",
-      desc: "Lap debu pada jeruji gerbang pagar besi depan.",
+      desc: "Lap dan bersihkan debu/kotoran pada daun pintu gerbang besi utama.",
       days: [2],
-      assignedTo: obBudi.id,
     },
     {
-      name: "Pembersihan Gradensa & Tanaman Plastik",
-      area: "Teras Balkon & Taman Tengah",
-      desc: "Lap debu pada daun tanaman hias plastik dan lemari gradensa.",
+      name: "Pengelapan Kaki-Kaki Kursi",
+      category: TaskCategory.PERIODIK,
+      area: "Ruang Kerja Staff & Meja Kantor",
+      desc: "Pembersihan mendalam kaki-kaki kursi ruang meeting dan tamu.",
       days: [2],
-      assignedTo: obSiti.id,
+    },
+    {
+      name: "Pembersihan Gradensa Dan Pohon Plastik",
+      category: TaskCategory.PERIODIK,
+      area: "Teras Balkon & Taman Tengah",
+      desc: "Lap debu pada tanaman hias plastik, pot bunga, dan rak gradensa.",
+      days: [2, 4],
     },
 
-    // --- PERIODIK RABU (Day 3) ---
+    // RABU (Day 3)
     {
-      name: "Pembersihan Teras Taman Tengah",
-      area: "Teras Balkon & Taman Tengah",
-      desc: "Sapu dedaunan kering di taman tengah dan rapikan batu coral.",
+      name: "Pengelapan Dinding Pintu",
+      category: TaskCategory.PERIODIK,
+      area: "Tangga, Selasar & List Kayu",
+      desc: "Lap kusen dan dinding sekitar pintu dari noda/debu yang menempel.",
       days: [3],
-      assignedTo: obBudi.id,
     },
     {
       name: "Pembersihan Area Tempat Wudhu Lt. 1 & 2",
+      category: TaskCategory.PERIODIK,
       area: "Mushola & Tempat Wudhu",
-      desc: "Sikat lantai tempat wudhu, bersihkan kran air, dan buang genangan air.",
+      desc: "Sikat lantai tempat wudhu, bersihkan kran air, dan buang kotoran saluran air.",
       days: [3],
-      assignedTo: obSiti.id,
     },
     {
-      name: "Pembersihan & Sanitasi Dispenser",
+      name: "Pembersihan Dispenser Air",
+      category: TaskCategory.PERIODIK,
       area: "Area Pantry & Dispenser",
-      desc: "Kuras dan bersihkan tatakan air dispenser serta ganti galon jika kosong.",
+      desc: "Kuras baki tetesan air dispenser, lap bodi dispenser, dan sanitasi kran.",
       days: [3],
-      assignedTo: obSiti.id,
     },
     {
-      name: "Pengelapan Stop Kontak & Saklar",
-      area: "Ruang Kerja Staff & Meja Kantor",
-      desc: "Lap bersih saklar lampu dan stop kontak dinding menggunakan kain kering.",
+      name: "Pembersihan Batu Coral Taman",
+      category: TaskCategory.PERIODIK,
+      area: "Teras Balkon & Taman Tengah",
+      desc: "Cuci dan tata rapi hamparan batu coral di area taman dalam/tengah.",
       days: [3],
-      assignedTo: obBudi.id,
     },
 
-    // --- PERIODIK KAMIS (Day 4) ---
+    // KAMIS (Day 4)
     {
       name: "Pengelapan Lemari File & Arsip",
+      category: TaskCategory.PERIODIK,
       area: "Ruang Kerja Staff & Meja Kantor",
-      desc: "Lap permukaan atas dan handle lemari file arsip kantor.",
+      desc: "Lap bagian luar lemari dokumen dan rak arsip kantor staff.",
       days: [4],
-      assignedTo: obSiti.id,
     },
     {
-      name: "Pembersihan Area Dak Atas",
-      area: "Dak Atas, Ruang Mesin & Luar",
-      desc: "Sapu sampah daun pada saluran talang dak atap agar tidak mampet.",
+      name: "Pembersihan Dak Lantai Atap",
+      category: TaskCategory.PERIODIK,
+      area: "Dak Atas, Canopy & Luar",
+      desc: "Sapu lantai dak atas dan bersihkan saluran drainase dari sampah/daun kering.",
       days: [4],
-      assignedTo: obBudi.id,
-    },
-    {
-      name: "Pembersihan Teras Balkon Lt. 2",
-      area: "Teras Balkon & Taman Tengah",
-      desc: "Sapu dan pel lantai teras balkon lantai 2.",
-      days: [4],
-      assignedTo: obSiti.id,
     },
 
-    // --- PERIODIK JUM'AT (Day 5) ---
+    // JUMAT (Day 5)
     {
-      name: "Pembersihan Kaca Bagian Dalam",
-      area: "Lobby Utama & Kaca Masuk",
-      desc: "Lap kaca partisi dan jendela bagian dalam menggunakan cairan pembersih kaca.",
+      name: "Pembersihan Kaca Dalam Ruangan",
+      category: TaskCategory.PERIODIK,
+      area: "Ruang Kerja Staff & Meja Kantor",
+      desc: "Lap kaca partisi ruangan meeting, pintu kaca dalam, dan jendela dalam.",
       days: [5],
-      assignedTo: obBudi.id,
     },
     {
-      name: "Pengelapan List Kayu Dinding",
+      name: "Pengelapan Handle Tangga",
+      category: TaskCategory.PERIODIK,
       area: "Tangga, Selasar & List Kayu",
-      desc: "Lap debu pada list kayu dinding koridor lantai 1 dan 2.",
+      desc: "Sanitasi dan lap mendalam seluruh railing dan handle tangga utama.",
       days: [5],
-      assignedTo: obSiti.id,
+    },
+    {
+      name: "Pembersihan Tabung APAR",
+      category: TaskCategory.PERIODIK,
+      area: "Tangga, Selasar & List Kayu",
+      desc: "Lap debu tabung pemadam api (APAR) dan cek posisi pin pengaman.",
+      days: [5],
     },
 
-    // --- BERKALA / GENERAL CLEANING SABTU (Day 6) ---
+    // === C. KELOMPOK BERKALA (General Cleaning Mingguan - Khusus Hari Sabtu: Day 6) ===
     {
-      name: "General Cleaning Toilet Total",
+      name: "General Cleaning Toilet",
+      category: TaskCategory.BERKALA,
       area: "Toilet Lt. 1 & Lt. 2",
-      desc: "Penyikatan kerak lantai toilet, dinding keramik, dan pembersihan exhaust fan.",
+      desc: "Deep cleaning dinding keramik, lantai, kloset, exhaust fan, dan desinfeksi total.",
       days: [6],
-      assignedTo: obBudi.id,
     },
     {
-      name: "General Cleaning Mushola Total",
+      name: "General Cleaning Mushola",
+      category: TaskCategory.BERKALA,
       area: "Mushola & Tempat Wudhu",
-      desc: "Pencucian sajadah, pembersihan menyeluruh karpet sholat, dan pel lantai.",
+      desc: "Pembersihan total karpet mushola, lap dinding, cuci mukena/sarung, dan wewangian.",
       days: [6],
-      assignedTo: obSiti.id,
     },
     {
-      name: "Penyikatan Lantai Garasi & Gazebo",
+      name: "Penyikatan Lantai Teras Balkon",
+      category: TaskCategory.BERKALA,
+      area: "Teras Balkon & Taman Tengah",
+      desc: "Sikat lantai balkon lantai 2 dengan cairan pembersih lantai dan bilas bersih.",
+      days: [6],
+    },
+    {
+      name: "Penyikatan Lantai Teras Garasi & Gazebo",
+      category: TaskCategory.BERKALA,
       area: "Garasi & Area Parkir Motor",
-      desc: "Sikat lantai semen/paving garasi samping dan area gazebo dengan sabun lantai.",
+      desc: "Sikat noda minyak/debu pada lantai paving garasi samping dan gazebo santai.",
       days: [6],
-      assignedTo: obBudi.id,
     },
     {
-      name: "Penyikatan Lantai Granit Teras Lobby",
+      name: "Penyikatan Lantai Teras Lobby",
+      category: TaskCategory.BERKALA,
       area: "Lobby Utama & Kaca Masuk",
-      desc: "Sikat dan buffing ringan lantai granit teras depan lobby.",
+      desc: "Penyikatan mendalam lantai granit luar dan selasar teras lobby utama.",
       days: [6],
-      assignedTo: obSiti.id,
     },
     {
-      name: "Pembersihan & Cuci Kaca Kanopi",
-      area: "Dak Atas, Ruang Mesin & Luar",
-      desc: "Cuci kaca kanopi depan dari lumut dan kotoran debu luar.",
+      name: "Pembersihan Kaca Canopy",
+      category: TaskCategory.BERKALA,
+      area: "Dak Atas, Canopy & Luar",
+      desc: "Cuci dan bersihkan permukaan kaca kanopi depan dari lumut/debu.",
       days: [6],
-      assignedTo: obBudi.id,
     },
     {
-      name: "Pencucian Seluruh Tempat Sampah Gedung",
-      area: "Garasi & Area Parkir Motor",
-      desc: "Cuci bersih seluruh wadah tong sampah luar dan dalam dengan disinfektan.",
+      name: "Penyikatan Lantai Tempat Wudhu",
+      category: TaskCategory.BERKALA,
+      area: "Mushola & Tempat Wudhu",
+      desc: "Sikat kerak lumut dan bersihkan lantai serta dinding area tempat wudhu.",
       days: [6],
-      assignedTo: obSiti.id,
+    },
+    {
+      name: "Pencucian Tempat-Tempat Sampah",
+      category: TaskCategory.BERKALA,
+      area: "Ruang Kerja Staff & Meja Kantor",
+      desc: "Cuci dan sikat seluruh wadah tempat sampah kantor dengan sabun dan keringkan.",
+      days: [6],
     },
   ];
 
-  let taskCount = 0;
+  console.log(`📋 Memproses ${taskDefinitions.length} Master Tugas...`);
+
+  // 5. Simpan Master Task & Jadwal (TaskSchedule)
+  const today = new Date();
+  const dateStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(today);
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const todayDate = new Date(Date.UTC(y, m - 1, d));
+  const todayDayOfWeek = todayDate.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+
+  let createdTasksCount = 0;
+  let createdSchedulesCount = 0;
+  let todayInstancesCount = 0;
+
   for (const t of taskDefinitions) {
     const areaId = areaMap.get(t.area);
-    if (!areaId) continue;
+    if (!areaId) {
+      console.warn(`⚠️ Area tidak ditemukan untuk tugas: ${t.name} (Area: ${t.area})`);
+      continue;
+    }
 
     const createdTask = await prisma.task.create({
       data: {
         name: t.name,
+        category: t.category,
         description: t.desc,
         areaId,
+        active: true,
       },
     });
-    taskCount++;
+    createdTasksCount++;
 
-    // Buat jadwal untuk hari-hari terkait
-    for (const day of t.days) {
+    // Buat jadwal mingguan (Pool Terbuka: assignedTo = null)
+    for (const dayOfWeek of t.days) {
       await prisma.taskSchedule.create({
         data: {
           taskId: createdTask.id,
-          dayOfWeek: day,
-          assignedTo: t.assignedTo,
+          dayOfWeek,
+          assignedTo: null, // Open pool for all OBs
+          active: true,
         },
       });
+      createdSchedulesCount++;
+    }
+
+    // Jika jadwal tugas aktif hari ini (atau jika hari ini Minggu, generate jadwal Senin untuk testing)
+    const effectiveTodayDay = todayDayOfWeek === 0 ? 1 : todayDayOfWeek;
+    if (t.days.includes(effectiveTodayDay)) {
+      await prisma.taskInstance.create({
+        data: {
+          taskId: createdTask.id,
+          assignedUserId: obBudi.id, // Default placeholder until claimed
+          scheduledDate: todayDate,
+          status: TaskStatus.PENDING,
+        },
+      });
+      todayInstancesCount++;
     }
   }
 
-  console.log(`📋 ${taskCount} Master Program Kerja Asli Excel berhasil di-generate beserta jadwalnya.`);
-
-  // 5. Generate Tugas Hari Ini (Today) untuk demo langsung
-  const today = new Date();
-  const dateStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(today);
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const todayDate = new Date(Date.UTC(year, month - 1, day));
-  const currentDayOfWeek = todayDate.getUTCDay() === 0 ? 1 : todayDate.getUTCDay();
-
-  const todaySchedules = await prisma.taskSchedule.findMany({
-    where: { dayOfWeek: currentDayOfWeek },
-    include: { task: true },
-  });
-
-  for (const s of todaySchedules) {
-    await prisma.taskInstance.create({
-      data: {
-        taskId: s.taskId,
-        assignedUserId: s.assignedTo || obBudi.id,
-        scheduledDate: todayDate,
-        status: TaskStatus.PENDING,
-      },
-    });
-  }
-
-  console.log(`✨ ${todaySchedules.length} Tugas Hari Ini (WIB) berhasil digenerate.`);
-  console.log("🎉 Migrasi data Excel selesai 100%!");
+  console.log(`\n🎉 Migrasi Selesai Sukses!`);
+  console.log(`   - Master Tugas: ${createdTasksCount} tugas`);
+  console.log(`   - Jadwal Mingguan: ${createdSchedulesCount} jadwal`);
+  console.log(`   - Tugas Aktif Hari Ini: ${todayInstancesCount} tugas di Pool Bersama`);
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Error seeding excel data:", e);
+    console.error("❌ Error during seed:", e);
     process.exit(1);
   })
   .finally(async () => {

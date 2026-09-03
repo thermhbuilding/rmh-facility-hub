@@ -31,6 +31,7 @@ interface TaskItem {
   revisionNote?: string;
   task: {
     name: string;
+    category?: "RUTINITAS" | "PERIODIK" | "BERKALA";
     description: string;
     area: {
       name: string;
@@ -334,7 +335,24 @@ export default function SupervisorDashboard() {
                   filteredTasks.map((t) => (
                     <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-3.5 px-4">
-                        <p className="font-bold text-slate-900 text-sm">{t.task.name}</p>
+                        <div className="flex items-center space-x-2">
+                          <p className="font-bold text-slate-900 text-sm">{t.task.name}</p>
+                          {t.task.category === "RUTINITAS" && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 shrink-0">
+                              Rutinitas
+                            </span>
+                          )}
+                          {t.task.category === "PERIODIK" && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
+                              Periodik
+                            </span>
+                          )}
+                          {t.task.category === "BERKALA" && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-300 shrink-0">
+                              Berkala / Sabtu
+                            </span>
+                          )}
+                        </div>
                         <p className="text-slate-500 text-[11px] mt-0.5">{t.task.area.name}</p>
                       </td>
                       <td className="py-3.5 px-4">
