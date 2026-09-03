@@ -64,7 +64,7 @@ export default function AdminDashboard() {
   const [newArea, setNewArea] = useState({ name: "", description: "" });
 
   const [showAddTask, setShowAddTask] = useState(false);
-  const [newTask, setNewTask] = useState({ name: "", description: "", areaId: "", assignedToUserId: "" });
+  const [newTask, setNewTask] = useState({ name: "", description: "", areaId: "" });
 
   // Edit Modals
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
@@ -72,7 +72,6 @@ export default function AdminDashboard() {
 
   const [editingArea, setEditingArea] = useState<AreaItem | null>(null);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
-  const [editTaskAssigned, setEditTaskAssigned] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -175,7 +174,7 @@ export default function AdminDashboard() {
       });
       if (res.ok) {
         setShowAddTask(false);
-        setNewTask({ name: "", description: "", areaId: "", assignedToUserId: "" });
+        setNewTask({ name: "", description: "", areaId: "" });
         await fetchAllData();
       } else {
         const error = await res.json();
@@ -200,9 +199,9 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           name: editingUser.name,
           username: editingUser.username,
+          password: editUserPassword || undefined,
           role: editingUser.role,
           active: editingUser.active,
-          password: editUserPassword || undefined,
         }),
       });
       if (res.ok) {
@@ -259,12 +258,10 @@ export default function AdminDashboard() {
           name: editingTask.name,
           description: editingTask.description,
           areaId: editingTask.areaId,
-          assignedToUserId: editTaskAssigned || undefined,
         }),
       });
       if (res.ok) {
         setEditingTask(null);
-        setEditTaskAssigned("");
         await fetchAllData();
       } else {
         const error = await res.json();
@@ -604,14 +601,14 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="flex items-center space-x-2 self-end md:self-center shrink-0">
+                      <span className="text-[11px] text-blue-800 font-semibold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                        🌐 Pool Bersama (Semua OB)
+                      </span>
                       <span className="text-[11px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                         🗓️ {t.schedules?.length || 0} Hari / Minggu
                       </span>
                       <button
-                        onClick={() => {
-                          setEditingTask(t);
-                          setEditTaskAssigned(t.schedules[0]?.assignedTo || "");
-                        }}
+                        onClick={() => setEditingTask(t)}
                         className="p-1.5 text-slate-500 hover:text-blue-900 hover:bg-blue-50 rounded"
                         title="Edit Tugas"
                       >
@@ -780,21 +777,6 @@ export default function AdminDashboard() {
                 {areas.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Tugaskan ke Pelaksana (OB)</label>
-              <select
-                value={editTaskAssigned}
-                onChange={(e) => setEditTaskAssigned(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-900"
-              >
-                <option value="">-- Pilih Pelaksana --</option>
-                {obUsers.map((ob) => (
-                  <option key={ob.id} value={ob.id}>
-                    {ob.name} (@{ob.username})
                   </option>
                 ))}
               </select>
@@ -970,21 +952,6 @@ export default function AdminDashboard() {
                 {areas.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Tugaskan ke Pelaksana (OB)</label>
-              <select
-                value={newTask.assignedToUserId}
-                onChange={(e) => setNewTask({ ...newTask, assignedToUserId: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-900"
-              >
-                <option value="">-- Pilih Pelaksana Default --</option>
-                {obUsers.map((ob) => (
-                  <option key={ob.id} value={ob.id}>
-                    {ob.name} (@{ob.username})
                   </option>
                 ))}
               </select>

@@ -15,7 +15,7 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const { name, description, areaId, assignedToUserId } = await req.json();
+    const { name, description, areaId } = await req.json();
 
     const dataToUpdate: any = {};
     if (name) dataToUpdate.name = name.trim();
@@ -26,13 +26,6 @@ export async function PUT(
       where: { id },
       data: dataToUpdate,
     });
-
-    if (assignedToUserId) {
-      await prisma.taskSchedule.updateMany({
-        where: { taskId: id },
-        data: { assignedTo: assignedToUserId },
-      });
-    }
 
     return NextResponse.json({ success: true, task: updated });
   } catch (error: any) {

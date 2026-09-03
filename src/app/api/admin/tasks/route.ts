@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { name, description, areaId, assignedToUserId } = await req.json();
+    const { name, description, areaId } = await req.json();
 
     if (!name?.trim() || !areaId) {
       return NextResponse.json(
@@ -49,30 +49,34 @@ export async function POST(req: Request) {
       },
     });
 
-    // Automatically create Monday-Saturday schedules
-    if (assignedToUserId) {
-      for (let day = 1; day <= 6; day++) {
-        await prisma.taskSchedule.create({
-          data: {
-            taskId: newTask.id,
-            dayOfWeek: day,
-            assignedTo: assignedToUserId,
-          },
-        });
-      }
-
-      // Also create instance for today so it shows immediately
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      await prisma.taskInstance.create({
+    // Automatically create Monday-Saturday open schedules (Pool Bersama)
+    for (let day = 1; day <= 6; day++) {
+      await prisma.taskSchedule.create({
         data: {
           taskId: newTask.id,
-          assignedUserId: assignedToUserId,
-          scheduledDate: today,
+          dayOfWeek: day,
+          assignedTo: null, // Open pool for all OBs
         },
       });
     }
+
+    // Determine today's date in WIB
+    const now = new Date();
+    const dateStr = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jakarta",
+    }).format(now);
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const todayDate = new Date(Date.UTC(year, month - 1, day));
+
+    // Also create task instance for today so it appears in today's shared pool immediately
+    await prisma.taskInstance.create({
+      data: {
+        taskId: newTask.id,
+        assignedUserId: session.id, // Placeholder until claimed by an OB
+        scheduledDate: todayDate,
+        status: "PENDING",
+      },
+    });
 
     return NextResponse.json({ success: true, task: newTask });
   } catch (error: any) {
